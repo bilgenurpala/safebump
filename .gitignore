@@ -1,0 +1,7 @@
+.venv/
+.tools-venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+target/tasks.db
+

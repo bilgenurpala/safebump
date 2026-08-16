@@ -122,3 +122,31 @@ Committed the workflow implementation before retrying. I then separated package-
 The corrected run created `safebump/fastapi-0.141.1`, installed FastAPI `0.141.1`, and captured pytest exit code `0`. All six tests passed with the existing `StarletteDeprecationWarning`. The result recorded `decision` as `null` because this slice does not choose whether to keep or roll back based on the test result.
 
 The fixed cleanup sequence restored `target/requirements.txt` and the target environment to FastAPI `0.139.0`, returned to `feat/sb-07-one-loop`, and deleted the temporary package branch. Baseline pytest and `pip check` both returned exit code `0`.
+
+## 2026-08-16 — SB-08: Decide
+
+### What I tried
+
+Extended the one-package workflow into a multi-package decision loop. Each eligible direct dependency receives its own branch and verification cycle. A candidate is kept only when both pytest and `pip check` return exit code `0`. Major upgrades are routed to human approval without installation, and unchanged packages are skipped.
+
+### Normal run
+
+The agent prioritized the vulnerable pytest upgrade first but did not install pytest `9.1.1` because it crosses a major-version boundary. It recorded `human_approval_required` even though the package had a known vulnerability.
+
+FastAPI `0.141.1` and Uvicorn `0.52.3` each passed all six tests and produced a clean `pip check`, so the agent kept them on separate local branches. HTTPX was already current and was skipped. The controller branch and its baseline environment were restored between package attempts.
+
+### Controlled failure
+
+I explicitly approved a controlled major-version demo using HTTPX `1.0.dev3`. The candidate installed and `pip check` returned exit code `0`, but pytest failed during test collection with exit code `2`. Starlette's test client expected `httpx.BaseTransport`, which was absent from the candidate version.
+
+This was important because package metadata alone reported no broken requirements while the application could not start its tests. The agent chose `rollback`, restored `httpx==0.28.1`, reinstalled the declared baseline, and reran both verification gates.
+
+### Rollback evidence
+
+After restoration, all six tests passed with the existing warning, `pip check` returned exit code `0`, and the rollback result recorded `verified: true`. The failed `safebump/httpx-1.0.dev3` branch was deleted. The FastAPI and Uvicorn keep branches remained available, while the controller requirements stayed at the original baseline.
+
+The agent source SHA-256 remained `8178dcebf59cf92759aa36d0067c4221fcd07f9fbcb474d63ea9aaf79952de56` before and after the run.
+
+### Decision boundary
+
+The verification policy is deterministic rather than model-generated. The agent is not valuable because it invents a safety judgment; it is valuable because observed tool results change its next action. Passing tests and a clean dependency check lead to a local keep, failed or incomplete verification leads to rollback, and a major-version boundary leads to human approval.

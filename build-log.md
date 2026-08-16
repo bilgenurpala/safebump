@@ -100,3 +100,25 @@ Fetched `origin/main`, preserved the local files outside the repository, recreat
 ### Evidence and decision
 
 The observation run reported the vulnerable pytest major upgrade first, followed by the FastAPI and Uvicorn minor upgrades and the unchanged HTTPX pin. `git diff -- target` remained empty, the run stayed on `feat/sb-06-observe`, and the agent source hash remained unchanged. No dependency was installed or upgraded.
+
+## 2026-08-16 — SB-07: One loop without a decision
+
+### What I tried
+
+Added a fixed one-package workflow for FastAPI `0.139.0` to `0.141.1`. The workflow checks the controller branch and tracked working tree, creates a package-specific branch, updates the direct pin, installs the candidate, runs pytest, prints the exit code and test evidence, and then restores the baseline pin and environment.
+
+### What broke
+
+The first run stopped before creating a branch because `safebump.py` still contained uncommitted changes. The clean-working-tree guard reported the tracked source modification, so no target file or dependency was changed.
+
+The first successful run also exposed a branch-naming defect. `canonicalize_name()` was applied to the version as well as the package name, producing `safebump/fastapi-0-141-1` instead of the intended `safebump/fastapi-0.141.1`.
+
+### What I changed
+
+Committed the workflow implementation before retrying. I then separated package-name normalization from version normalization so package names remain canonical while version dots remain readable in branch names.
+
+### Evidence and result
+
+The corrected run created `safebump/fastapi-0.141.1`, installed FastAPI `0.141.1`, and captured pytest exit code `0`. All six tests passed with the existing `StarletteDeprecationWarning`. The result recorded `decision` as `null` because this slice does not choose whether to keep or roll back based on the test result.
+
+The fixed cleanup sequence restored `target/requirements.txt` and the target environment to FastAPI `0.139.0`, returned to `feat/sb-07-one-loop`, and deleted the temporary package branch. Baseline pytest and `pip check` both returned exit code `0`.

@@ -1,3 +1,5 @@
+import argparse
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -11,6 +13,7 @@ TARGET_DIR = REPO_ROOT / "target"
 REQUIREMENTS_PATH = TARGET_DIR / "requirements.txt"
 TARGET_PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
 PIP_AUDIT = REPO_ROOT / ".tools-venv" / "bin" / "pip-audit"
+SOURCE_PATH = Path(__file__).resolve()
 
 
 def run_command(
@@ -71,7 +74,6 @@ def collect_outdated_packages() -> dict[str, dict[str, str]]:
         ],
         {0},
     )
-
     packages = json.loads(result.stdout)
 
     return {
@@ -186,12 +188,6 @@ def observe() -> list[dict[str, object]]:
     return sorted(observations, key=priority_key)
 
 
-def print_observations(
-    observations: list[dict[str, object]],
-) -> None:
-    print(json.dumps(observations, indent=2))
-
-
 def git_output(args: list[str]) -> str:
     result = run_command(["git", *args], {0})
     return result.stdout.strip()
@@ -225,6 +221,10 @@ def require_clean_worktree() -> None:
             "Tracked working tree changes must be committed first:\n"
             f"{status}"
         )
+
+
+def source_hash() -> str:
+    return hashlib.sha256(SOURCE_PATH.read_bytes()).hexdigest()
 
 
 def normalize_package_component(value: str) -> str:
@@ -296,7 +296,19 @@ def run_pytest() -> subprocess.CompletedProcess[str]:
             str(TARGET_DIR),
             "-q",
         ],
-        {0, 1, 2, 3, 4, 5},
+        set(range(256)),
+    )
+
+
+def run_pip_check() -> subprocess.CompletedProcess[str]:
+    return run_command(
+        [
+            str(TARGET_PYTHON),
+            "-m",
+            "pip",
+            "check",
+        ],
+        set(range(256)),
     )
 
 
@@ -315,18 +327,164 @@ def restore_baseline_environment() -> None:
     )
 
 
-def run_one_loop(
+def restore_requirement_file() -> None:
+    run_command(
+        [
+            "git",
+            "restore",
+            "--source",
+            "HEAD",
+            "--",
+            str(REQUIREMENTS_PATH.relative_to(REPO_ROOT)),
+        ],
+        {0},
+    )
+
+
+def verify_restored_baseline() -> dict[str, object]:
+    pytest_result = run_pytest()
+    pip_check_result = run_pip_check()
+
+    return {
+        "pytest_exit_code": pytest_result.returncode,
+        "pip_check_exit_code": pip_check_result.returncode,
+        "verified": (
+            pytest_result.returncode == 0
+            and pip_check_result.returncode == 0
+        ),
+        "pytest_stdout": pytest_result.stdout.strip(),
+        "pytest_stderr": pytest_result.stderr.strip(),
+        "pip_check_stdout": pip_check_result.stdout.strip(),
+        "pip_check_stderr": pip_check_result.stderr.strip(),
+    }
+
+
+def commit_kept_requirement(
+    package_name: str,
+    candidate_version: str,
+) -> str:
+    relative_path = str(
+        REQUIREMENTS_PATH.relative_to(REPO_ROOT)
+    )
+
+    run_command(
+        [
+            "git",
+            "add",
+            "--",
+            relative_path,
+        ],
+        {0},
+    )
+    run_command(
+        [
+            "git",
+            "commit",
+            "-m",
+            f"feat: upgrade {package_name} to {candidate_version}",
+        ],
+        {0},
+    )
+
+    return git_output(["rev-parse", "--short", "HEAD"])
+
+
+def return_to_controller(
+    controller_branch: str,
+) -> None:
+    run_command(
+        [
+            "git",
+            "switch",
+            controller_branch,
+        ],
+        {0},
+    )
+
+
+def delete_upgrade_branch(
+    upgrade_branch: str,
+) -> None:
+    run_command(
+        [
+            "git",
+            "branch",
+            "-d",
+            upgrade_branch,
+        ],
+        {0},
+    )
+
+
+def restore_controller_environment() -> None:
+    restore_baseline_environment()
+
+    pytest_result = run_pytest()
+    pip_check_result = run_pip_check()
+
+    if pytest_result.returncode != 0:
+        raise RuntimeError(
+            "Controller baseline pytest failed after restoration"
+        )
+
+    if pip_check_result.returncode != 0:
+        raise RuntimeError(
+            "Controller baseline pip check failed after restoration"
+        )
+
+
+def approval_result(
+    package: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "package": package["name"],
+        "previous_version": package["current_version"],
+        "candidate_version": package["latest_version"],
+        "change_type": package["change_type"],
+        "has_vulnerability": package["has_vulnerability"],
+        "vulnerabilities": package["vulnerabilities"],
+        "decision": "human_approval_required",
+        "reason": (
+            "Major upgrades are not installed automatically, "
+            "including security-priority upgrades."
+        ),
+        "branch": None,
+        "install_attempted": False,
+    }
+
+
+def skipped_result(
+    package: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "package": package["name"],
+        "previous_version": package["current_version"],
+        "candidate_version": package["latest_version"],
+        "change_type": package["change_type"],
+        "decision": "skip",
+        "reason": "The direct dependency is already current.",
+        "branch": None,
+        "install_attempted": False,
+    }
+
+
+def attempt_candidate(
     package_name: str,
     current_version: str,
     candidate_version: str,
+    change_type: str,
+    has_vulnerability: bool,
+    vulnerabilities: list[dict[str, object]],
 ) -> dict[str, object]:
     controller_branch = require_safe_branch()
     require_clean_worktree()
+    initial_source_hash = source_hash()
     upgrade_branch = build_upgrade_branch(
         package_name,
         candidate_version,
     )
     branch_created = False
+    returned_to_controller = False
 
     try:
         run_command(
@@ -349,66 +507,205 @@ def run_one_loop(
             package_name,
             candidate_version,
         )
+
         pytest_result = run_pytest()
+        pip_check_result = run_pip_check()
+        should_keep = (
+            pytest_result.returncode == 0
+            and pip_check_result.returncode == 0
+        )
 
         result = {
             "package": package_name,
             "previous_version": current_version,
             "candidate_version": candidate_version,
+            "change_type": change_type,
+            "has_vulnerability": has_vulnerability,
+            "vulnerabilities": vulnerabilities,
             "branch": upgrade_branch,
             "pytest_exit_code": pytest_result.returncode,
             "pytest_stdout": pytest_result.stdout.strip(),
             "pytest_stderr": pytest_result.stderr.strip(),
-            "decision": None,
+            "pip_check_exit_code": pip_check_result.returncode,
+            "pip_check_stdout": pip_check_result.stdout.strip(),
+            "pip_check_stderr": pip_check_result.stderr.strip(),
         }
+
+        if should_keep:
+            commit_hash = commit_kept_requirement(
+                package_name,
+                candidate_version,
+            )
+            result.update(
+                {
+                    "decision": "keep",
+                    "reason": (
+                        "Pytest passed and pip check reported "
+                        "no dependency conflicts."
+                    ),
+                    "commit": commit_hash,
+                    "rollback": None,
+                }
+            )
+
+            return_to_controller(controller_branch)
+            returned_to_controller = True
+            restore_controller_environment()
+        else:
+            reasons = []
+
+            if pytest_result.returncode != 0:
+                reasons.append(
+                    f"pytest exited with "
+                    f"{pytest_result.returncode}"
+                )
+
+            if pip_check_result.returncode != 0:
+                reasons.append(
+                    f"pip check exited with "
+                    f"{pip_check_result.returncode}"
+                )
+
+            restore_requirement_file()
+            restore_baseline_environment()
+            rollback = verify_restored_baseline()
+
+            result.update(
+                {
+                    "decision": "rollback",
+                    "reason": "; ".join(reasons),
+                    "commit": None,
+                    "rollback": rollback,
+                }
+            )
+
+            return_to_controller(controller_branch)
+            returned_to_controller = True
+            delete_upgrade_branch(upgrade_branch)
+
+        final_source_hash = source_hash()
+        result["source_hash_before"] = initial_source_hash
+        result["source_hash_after"] = final_source_hash
+        result["source_unchanged"] = (
+            initial_source_hash == final_source_hash
+        )
+
+        if not result["source_unchanged"]:
+            raise RuntimeError(
+                "Agent source changed during the package attempt"
+            )
 
         print(json.dumps(result, indent=2))
         return result
-    finally:
-        if branch_created:
-            run_command(
-                [
-                    "git",
-                    "restore",
-                    "--source",
-                    "HEAD",
-                    "--",
-                    str(
-                        REQUIREMENTS_PATH.relative_to(
-                            REPO_ROOT
-                        )
-                    ),
-                ],
-                {0},
-            )
+    except Exception:
+        if branch_created and not returned_to_controller:
+            restore_requirement_file()
             restore_baseline_environment()
-            run_command(
-                [
-                    "git",
-                    "switch",
-                    controller_branch,
-                ],
-                {0},
+            return_to_controller(controller_branch)
+
+            if upgrade_branch in git_output(
+                ["branch", "--format=%(refname:short)"]
+            ).splitlines():
+                delete_upgrade_branch(upgrade_branch)
+
+        raise
+
+
+def run_normal_candidates(
+    observations: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    results = []
+
+    for package in observations:
+        change_type = str(package["change_type"])
+
+        if change_type == "major":
+            result = approval_result(package)
+        elif change_type == "none":
+            result = skipped_result(package)
+        else:
+            result = attempt_candidate(
+                package_name=str(package["name"]),
+                current_version=str(
+                    package["current_version"]
+                ),
+                candidate_version=str(
+                    package["latest_version"]
+                ),
+                change_type=change_type,
+                has_vulnerability=bool(
+                    package["has_vulnerability"]
+                ),
+                vulnerabilities=list(
+                    package["vulnerabilities"]
+                ),
             )
-            run_command(
-                [
-                    "git",
-                    "branch",
-                    "-d",
-                    upgrade_branch,
-                ],
-                {0},
-            )
+
+        if change_type in {"major", "none"}:
+            print(json.dumps(result, indent=2))
+
+        results.append(result)
+
+    return results
+
+
+def run_failure_demo() -> dict[str, object]:
+    return attempt_candidate(
+        package_name="httpx",
+        current_version="0.28.1",
+        candidate_version="1.0.dev3",
+        change_type="major",
+        has_vulnerability=False,
+        vulnerabilities=[],
+    )
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--approve-major-demo",
+        action="store_true",
+    )
+    return parser.parse_args()
 
 
 def main() -> None:
+    args = parse_args()
+    controller_branch = require_safe_branch()
+    require_clean_worktree()
+    initial_source_hash = source_hash()
     observations = observe()
-    print_observations(observations)
-    run_one_loop(
-        package_name="fastapi",
-        current_version="0.139.0",
-        candidate_version="0.141.1",
+
+    print(
+        json.dumps(
+            {
+                "controller_branch": controller_branch,
+                "source_hash": initial_source_hash,
+                "observations": observations,
+            },
+            indent=2,
+        )
     )
+
+    if args.approve_major_demo:
+        result = run_failure_demo()
+        results = [result]
+    else:
+        results = run_normal_candidates(observations)
+
+    final_source_hash = source_hash()
+
+    summary = {
+        "controller_branch": require_safe_branch(),
+        "results": results,
+        "source_hash_before": initial_source_hash,
+        "source_hash_after": final_source_hash,
+        "source_unchanged": (
+            initial_source_hash == final_source_hash
+        ),
+    }
+
+    print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":

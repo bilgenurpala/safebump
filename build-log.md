@@ -83,3 +83,20 @@ The MVP remains one Linux target, direct `==` pins, patch/minor automation, majo
 
 The design documents are ready for public-link verification. Portal submission, GitHub issue closure, and board movement must occur only after the files are pushed and the public links are checked.
 
+## 2026-08-16 — SB-06: Observe
+
+### What I tried
+
+Implemented the read-only observation slice using JSON output from `pip list --outdated` and `pip-audit`. The script reads the four direct pins from `target/requirements.txt`, merges outdated and vulnerability evidence, classifies version changes, and sorts findings by security status, patch, minor, major, and unchanged packages.
+
+### What broke
+
+The first verification exposed that the local repository had been initialized without fetching or attaching to the existing remote history. Both `safebump.py` and the entire `target/` directory appeared untracked. The package scan worked, but the planned Git rollback could not have safely restored an untracked target.
+
+### What I changed
+
+Fetched `origin/main`, preserved the local files outside the repository, recreated the local `main` branch from `origin/main`, and created `feat/sb-06-observe` from the tracked baseline. I restored only `safebump.py`; the target now comes from the committed remote baseline.
+
+### Evidence and decision
+
+The observation run reported the vulnerable pytest major upgrade first, followed by the FastAPI and Uvicorn minor upgrades and the unchanged HTTPX pin. `git diff -- target` remained empty, the run stayed on `feat/sb-06-observe`, and the agent source hash remained unchanged. No dependency was installed or upgraded.

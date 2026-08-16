@@ -227,8 +227,12 @@ def require_clean_worktree() -> None:
         )
 
 
-def normalize_branch_component(value: str) -> str:
-    normalized = canonicalize_name(value)
+def normalize_package_component(value: str) -> str:
+    return canonicalize_name(value)
+
+
+def normalize_version_component(value: str) -> str:
+    normalized = str(Version(value))
 
     return "".join(
         character
@@ -241,8 +245,8 @@ def build_upgrade_branch(
     package_name: str,
     candidate_version: str,
 ) -> str:
-    package = normalize_branch_component(package_name)
-    version = normalize_branch_component(candidate_version)
+    package = normalize_package_component(package_name)
+    version = normalize_version_component(candidate_version)
 
     return f"safebump/{package}-{version}"
 

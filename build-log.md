@@ -205,3 +205,17 @@ A successful target run names the six tests that passed but still excludes produ
 ### Raw evidence and limitation
 
 The Linux terminal sessions are preserved without editing in `raw-runs/`; generated reports are preserved in `reports/`. The core dependency run completed without mid-run hand editing. The eval fixtures are controlled demonstrations for failure paths; they do not expand the supported production scope beyond one pinned Python target.
+
+## 2026-08-20 — SB-12: Stranger-reproducible README
+
+### What I checked
+
+Reviewed the README against issue #42 from the perspective of a maintainer cloning the repository without prior project context. The existing version already contained Linux virtual-environment setup, the architecture sketch, five eval results, limitations, evidence links, and the MIT license.
+
+### What was missing
+
+The intended user was implied rather than stated. The setup also omitted the Git identity prerequisite even though a kept candidate creates a local commit. Usage commands did not explain where the agent returns after a run, what happens to kept and failed branches, or show the shape of an actual report. The guardrails existed across the status, usage, and limitations sections but were not collected into one scannable contract.
+
+### What changed
+
+Added the maintainer and approval responsibility explicitly, repeated that `target/` is a disclosed BE-02 copy, listed verified platform and tool prerequisites, added Git identity checks, explained network use and branch lifecycle, included a real kept-result excerpt and rollback link, added a dedicated guardrail section, and documented the two most likely safe-stop messages. The limitations remain unchanged rather than being softened for the final README.

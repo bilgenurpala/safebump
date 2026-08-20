@@ -8,6 +8,10 @@ The project was built during the [FlyRank AI internship](https://github.com/bilg
 
 SafeBump has a working end-to-end agent loop. It observes direct dependency updates and vulnerability findings, routes major versions to approval, attempts eligible upgrades on isolated branches, runs pytest and `pip check`, keeps or rolls back the candidate, and writes a bounded-evidence Markdown report. All five pre-written evaluation cases have been exercised on Ubuntu 26.04 LTS with Python 3.14.4.
 
+## Intended User
+
+SafeBump is for a Python project maintainer who wants bounded, reviewable evidence before accepting a direct dependency upgrade. The maintainer runs it manually, reviews local branches and reports, and remains responsible for major-version and remote-action decisions. The bundled target is explicitly a copy of the internship's BE-02 FastAPI and SQLite project; it is a controlled evaluation target, not a newly built backend.
+
 ## Architecture
 
 ```text
@@ -55,6 +59,24 @@ requirements + package index + audit findings
 
 SafeBump is verified on Ubuntu 26.04 LTS with Python 3.14.4. Run it from a non-default branch because the default-branch guard intentionally stops on `main` and `master`.
 
+Prerequisites:
+
+- Ubuntu 26.04 LTS
+- Python 3.14.4 with `venv`
+- Git with a configured user name and email
+- Network access to the Python package index and vulnerability data source
+
+Confirm the required tools before cloning:
+
+```bash
+python3 --version
+git --version
+git config user.name
+git config user.email
+```
+
+The Python version must report `3.14.4`. If either Git identity command is empty, configure your own identity before running SafeBump because a kept upgrade is committed locally.
+
 ```bash
 git clone https://github.com/bilgenurpala/safebump.git
 cd safebump
@@ -68,11 +90,31 @@ python3 -m venv .tools-venv
 python safebump.py
 ```
 
+The first run can access the network while it checks available releases, queries vulnerability data, and installs candidates. It returns to the controller branch after every attempt. Kept candidates remain as local `safebump/<package>-<version>` branches; failed candidates are removed after the baseline is restored.
+
+## Usage and Example Report
+
 Every run writes a timestamped file under `reports/`. To select the path explicitly:
 
 ```bash
 python safebump.py --report reports/my-run.md
 ```
+
+A kept candidate produces a report section like this:
+
+```text
+### uvicorn
+
+- Attempted: `0.52.3 -> 0.52.4`
+- Change type: `patch`
+- Decision: `keep`
+- Reason: Pytest passed and pip check reported no dependency conflicts.
+- Pytest exit code: `0`
+- pip check exit code: `0`
+- Branch: `safebump/uvicorn-0.52.4`
+```
+
+A rollback report preserves the concrete failing command and error. See the committed [HTTPX rollback report](reports/eval-test-rollback.md), which names the missing `httpx.BaseTransport` API and records the restored baseline.
 
 Run the deterministic guardrail tests with:
 
@@ -87,6 +129,19 @@ SafeBump does not push, open pull requests, or merge. A remote request without e
 ```bash
 python safebump.py --request-remote-action push
 ```
+
+## Guardrails
+
+- Stop before mutation on `main`, `master`, detached HEAD, or a tracked dirty working tree.
+- Attempt no more than four packages per run.
+- Limit each external command to ten minutes and the complete run to forty-five minutes.
+- Never install a major version through the normal automatic path.
+- Never push or create a pull request without approval for that exact action.
+- Never merge.
+- Restore the requirements pin and environment after failed or incomplete verification.
+- Report only checks that actually completed and name the coverage boundary.
+
+If the run stops with `Refusing to run on default branch`, create and switch to a non-default controller branch. If it reports tracked changes, review and commit or intentionally restore those changes yourself; SafeBump will not decide what to discard.
 
 ## Evaluation Results
 

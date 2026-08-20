@@ -73,7 +73,11 @@ class FailureDetailTests(unittest.TestCase):
         result = CompletedProcess(
             args=["pytest"],
             returncode=2,
-            stdout="collection stopped\nAttributeError: httpx.BaseTransport missing\n",
+            stdout=(
+                "collection stopped\n"
+                "E   AttributeError: httpx.BaseTransport missing\n"
+                "1 warning, 1 error in 0.25s\n"
+            ),
             stderr="",
         )
 

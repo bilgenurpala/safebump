@@ -378,6 +378,10 @@ def failure_detail(result: subprocess.CompletedProcess[str]) -> str:
     lines = [line.strip() for line in output.splitlines() if line.strip()]
     markers = ("error", "failed", "incompatible", "requires", "conflict")
 
+    for line in lines:
+        if line.startswith("E   "):
+            return line.removeprefix("E   ").strip()
+
     for line in reversed(lines):
         if any(marker in line.lower() for marker in markers):
             return line

@@ -2,6 +2,8 @@ import argparse
 import hashlib
 import json
 import subprocess
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from packaging.utils import canonicalize_name
@@ -14,18 +16,73 @@ REQUIREMENTS_PATH = TARGET_DIR / "requirements.txt"
 TARGET_PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
 PIP_AUDIT = REPO_ROOT / ".tools-venv" / "bin" / "pip-audit"
 SOURCE_PATH = Path(__file__).resolve()
+REPORTS_DIR = REPO_ROOT / "reports"
+COMMAND_TIMEOUT_SECONDS = 600
+RUN_TIMEOUT_SECONDS = 2700
+MAX_ATTEMPTS = 4
+VERIFIED_TESTS = [
+    "test_seed_runs_once",
+    "test_read_endpoints",
+    "test_create_and_persist_task",
+    "test_update_and_delete_task",
+    "test_update_and_delete_unknown_task",
+    "test_update_validation",
+]
+UNVERIFIED_AREAS = [
+    "application behavior outside the six target tests",
+    "production traffic and deployment behavior",
+    "performance, concurrency, and load behavior",
+    "security properties not represented by pip-audit",
+    "platforms other than Ubuntu 26.04 LTS with Python 3.14.4",
+]
+
+
+class RunLimits:
+    def __init__(
+        self,
+        max_attempts: int = MAX_ATTEMPTS,
+        run_timeout_seconds: int = RUN_TIMEOUT_SECONDS,
+    ) -> None:
+        self.max_attempts = max_attempts
+        self.deadline = time.monotonic() + run_timeout_seconds
+        self.attempts = 0
+
+    def remaining_seconds(self) -> int:
+        remaining = int(self.deadline - time.monotonic())
+
+        if remaining <= 0:
+            raise TimeoutError("The total run time limit was reached")
+
+        return remaining
+
+    def begin_attempt(self) -> None:
+        if self.attempts >= self.max_attempts:
+            raise RuntimeError(
+                f"The package attempt limit of {self.max_attempts} was reached"
+            )
+
+        self.remaining_seconds()
+        self.attempts += 1
+
+
+RUN_LIMITS: RunLimits | None = None
 
 
 def run_command(
     args: list[str],
     accepted_exit_codes: set[int],
 ) -> subprocess.CompletedProcess[str]:
+    timeout = COMMAND_TIMEOUT_SECONDS
+
+    if RUN_LIMITS is not None:
+        timeout = min(timeout, RUN_LIMITS.remaining_seconds())
+
     result = subprocess.run(
         args,
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=timeout,
         check=False,
     )
 
@@ -476,6 +533,10 @@ def attempt_candidate(
     has_vulnerability: bool,
     vulnerabilities: list[dict[str, object]],
 ) -> dict[str, object]:
+    if RUN_LIMITS is None:
+        raise RuntimeError("Run limits must be initialized")
+
+    RUN_LIMITS.begin_attempt()
     controller_branch = require_safe_branch()
     require_clean_worktree()
     initial_source_hash = source_hash()
@@ -649,6 +710,164 @@ def run_normal_candidates(
     return results
 
 
+def remote_action_result(
+    action: str,
+    approved: bool,
+) -> dict[str, object]:
+    if action == "merge":
+        return {
+            "action": action,
+            "decision": "blocked",
+            "reason": "SafeBump never merges.",
+            "executed": False,
+        }
+
+    if not approved:
+        return {
+            "action": action,
+            "decision": "awaiting_human_approval",
+            "reason": (
+                f"Explicit approval for {action} was not supplied."
+            ),
+            "executed": False,
+        }
+
+    return {
+        "action": action,
+        "decision": "approved_but_not_executed",
+        "reason": (
+            "The MVP records approval but does not implement remote "
+            "mutation. Run the reviewed Git or GitHub command manually."
+        ),
+        "executed": False,
+    }
+
+
+def render_report(
+    started_at: datetime,
+    finished_at: datetime,
+    controller_branch: str | None,
+    results: list[dict[str, object]],
+    status: str,
+    error: str | None,
+    remote_action: dict[str, object] | None,
+) -> str:
+    elapsed = (finished_at - started_at).total_seconds()
+    lines = [
+        "# SafeBump Run Report",
+        "",
+        f"- Started: `{started_at.isoformat()}`",
+        f"- Finished: `{finished_at.isoformat()}`",
+        f"- Duration: `{elapsed:.2f} seconds`",
+        f"- Controller branch: `{controller_branch or 'unavailable'}`",
+        f"- Run status: `{status}`",
+        f"- Package attempts: `{RUN_LIMITS.attempts if RUN_LIMITS else 0}/{RUN_LIMITS.max_attempts if RUN_LIMITS else MAX_ATTEMPTS}`",
+        "",
+        "## Package Decisions",
+        "",
+    ]
+
+    if not results:
+        lines.append("No package decision completed.")
+
+    for result in results:
+        lines.extend(
+            [
+                f"### {result.get('package', 'Unknown package')}",
+                "",
+                f"- Attempted: `{result.get('previous_version', 'unknown')} -> {result.get('candidate_version', 'unknown')}`",
+                f"- Change type: `{result.get('change_type', 'unknown')}`",
+                f"- Decision: `{result.get('decision', 'unknown')}`",
+                f"- Reason: {result.get('reason', 'No reason recorded.')}",
+                f"- Pytest exit code: `{result.get('pytest_exit_code', 'not run')}`",
+                f"- pip check exit code: `{result.get('pip_check_exit_code', 'not run')}`",
+                f"- Branch: `{result.get('branch') or 'none'}`",
+                "",
+            ]
+        )
+
+        if result.get("pytest_stdout") or result.get("pytest_stderr"):
+            lines.extend(
+                [
+                    "#### Pytest evidence",
+                    "",
+                    "```text",
+                    str(
+                        result.get("pytest_stdout")
+                        or result.get("pytest_stderr")
+                    ),
+                    "```",
+                    "",
+                ]
+            )
+
+        if result.get("pip_check_stdout") or result.get("pip_check_stderr"):
+            lines.extend(
+                [
+                    "#### pip check evidence",
+                    "",
+                    "```text",
+                    str(
+                        result.get("pip_check_stdout")
+                        or result.get("pip_check_stderr")
+                    ),
+                    "```",
+                    "",
+                ]
+            )
+
+    lines.extend(["## Approval Gate", ""])
+
+    if remote_action is None:
+        lines.append("No remote action was requested or executed.")
+    else:
+        lines.extend(
+            [
+                f"- Requested action: `{remote_action['action']}`",
+                f"- Decision: `{remote_action['decision']}`",
+                f"- Executed: `{str(remote_action['executed']).lower()}`",
+                f"- Reason: {remote_action['reason']}",
+            ]
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Honesty and Coverage Boundary",
+            "",
+            "The defined checks provide bounded evidence, not proof of complete safety.",
+            "",
+            "Verified by the target test suite:",
+            "",
+            *[f"- `{test}`" for test in VERIFIED_TESTS],
+            "",
+            "Not verified by this run:",
+            "",
+            *[f"- {area}" for area in UNVERIFIED_AREAS],
+        ]
+    )
+
+    if error:
+        lines.extend(["", "## Run Error", "", f"`{error}`"])
+
+    return "\n".join(lines) + "\n"
+
+
+def write_report(content: str, output: Path | None) -> Path:
+    REPORTS_DIR.mkdir(exist_ok=True)
+    report_path = output or REPORTS_DIR / (
+        datetime.now(timezone.utc).strftime("run-%Y%m%dT%H%M%SZ.md")
+    )
+    resolved = report_path.resolve()
+
+    if not resolved.is_relative_to(REPO_ROOT):
+        raise RuntimeError("Report path must stay inside the repository")
+
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    resolved.write_text(content, encoding="utf-8")
+    return resolved
+
+
 def run_failure_demo() -> dict[str, object]:
     return attempt_candidate(
         package_name="httpx",
@@ -666,46 +885,93 @@ def parse_args() -> argparse.Namespace:
         "--approve-major-demo",
         action="store_true",
     )
+    parser.add_argument(
+        "--request-remote-action",
+        choices=["push", "pr", "merge"],
+    )
+    parser.add_argument(
+        "--approve-remote-action",
+        action="store_true",
+    )
+    parser.add_argument("--report", type=Path)
+    parser.add_argument("--max-attempts", type=int, default=MAX_ATTEMPTS)
+    parser.add_argument(
+        "--run-timeout-seconds",
+        type=int,
+        default=RUN_TIMEOUT_SECONDS,
+    )
     return parser.parse_args()
 
 
 def main() -> None:
+    global RUN_LIMITS
     args = parse_args()
-    controller_branch = require_safe_branch()
-    require_clean_worktree()
-    initial_source_hash = source_hash()
-    observations = observe()
-
-    print(
-        json.dumps(
-            {
-                "controller_branch": controller_branch,
-                "source_hash": initial_source_hash,
-                "observations": observations,
-            },
-            indent=2,
-        )
+    started_at = datetime.now(timezone.utc)
+    RUN_LIMITS = RunLimits(
+        max_attempts=args.max_attempts,
+        run_timeout_seconds=args.run_timeout_seconds,
     )
+    controller_branch = None
+    results = []
+    status = "failed"
+    error = None
+    remote_action = remote_action_result(
+        args.request_remote_action,
+        args.approve_remote_action,
+    ) if args.request_remote_action else None
 
-    if args.approve_major_demo:
-        result = run_failure_demo()
-        results = [result]
-    else:
-        results = run_normal_candidates(observations)
+    try:
+        if args.max_attempts < 1 or args.run_timeout_seconds < 1:
+            raise RuntimeError("Attempt and run-time limits must be positive")
 
-    final_source_hash = source_hash()
+        controller_branch = require_safe_branch()
+        require_clean_worktree()
+        initial_source_hash = source_hash()
+        observations = observe()
 
-    summary = {
-        "controller_branch": require_safe_branch(),
-        "results": results,
-        "source_hash_before": initial_source_hash,
-        "source_hash_after": final_source_hash,
-        "source_unchanged": (
-            initial_source_hash == final_source_hash
-        ),
-    }
+        print(
+            json.dumps(
+                {
+                    "controller_branch": controller_branch,
+                    "source_hash": initial_source_hash,
+                    "observations": observations,
+                },
+                indent=2,
+            )
+        )
 
-    print(json.dumps(summary, indent=2))
+        if args.approve_major_demo:
+            results = [run_failure_demo()]
+        else:
+            results = run_normal_candidates(observations)
+
+        final_source_hash = source_hash()
+        status = "completed"
+        summary = {
+            "controller_branch": require_safe_branch(),
+            "results": results,
+            "remote_action": remote_action,
+            "source_hash_before": initial_source_hash,
+            "source_hash_after": final_source_hash,
+            "source_unchanged": initial_source_hash == final_source_hash,
+        }
+        print(json.dumps(summary, indent=2))
+    except Exception as caught:
+        error = f"{type(caught).__name__}: {caught}"
+        raise
+    finally:
+        finished_at = datetime.now(timezone.utc)
+        report = render_report(
+            started_at=started_at,
+            finished_at=finished_at,
+            controller_branch=controller_branch,
+            results=results,
+            status=status,
+            error=error,
+            remote_action=remote_action,
+        )
+        report_path = write_report(report, args.report)
+        print(f"Report: {report_path}")
 
 
 if __name__ == "__main__":

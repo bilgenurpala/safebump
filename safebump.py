@@ -369,6 +369,22 @@ def run_pip_check() -> subprocess.CompletedProcess[str]:
     )
 
 
+def failure_detail(result: subprocess.CompletedProcess[str]) -> str:
+    output = "\n".join(
+        part.strip()
+        for part in [result.stdout, result.stderr]
+        if part.strip()
+    )
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    markers = ("error", "failed", "incompatible", "requires", "conflict")
+
+    for line in reversed(lines):
+        if any(marker in line.lower() for marker in markers):
+            return line
+
+    return lines[-1] if lines else "no command output was captured"
+
+
 def restore_baseline_environment() -> None:
     run_command(
         [
@@ -618,13 +634,15 @@ def attempt_candidate(
             if pytest_result.returncode != 0:
                 reasons.append(
                     f"pytest exited with "
-                    f"{pytest_result.returncode}"
+                    f"{pytest_result.returncode}: "
+                    f"{failure_detail(pytest_result)}"
                 )
 
             if pip_check_result.returncode != 0:
                 reasons.append(
                     f"pip check exited with "
-                    f"{pip_check_result.returncode}"
+                    f"{pip_check_result.returncode}: "
+                    f"{failure_detail(pip_check_result)}"
                 )
 
             restore_requirement_file()

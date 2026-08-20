@@ -1,6 +1,7 @@
 import time
 import unittest
 from datetime import datetime, timezone
+from subprocess import CompletedProcess
 
 import safebump
 
@@ -65,6 +66,21 @@ class HonestyReportTests(unittest.TestCase):
 
         self.assertIn("`test_seed_runs_once`", report)
         self.assertIn("production traffic", report)
+
+
+class FailureDetailTests(unittest.TestCase):
+    def test_specific_error_is_selected(self) -> None:
+        result = CompletedProcess(
+            args=["pytest"],
+            returncode=2,
+            stdout="collection stopped\nAttributeError: httpx.BaseTransport missing\n",
+            stderr="",
+        )
+
+        self.assertEqual(
+            safebump.failure_detail(result),
+            "AttributeError: httpx.BaseTransport missing",
+        )
 
 
 if __name__ == "__main__":

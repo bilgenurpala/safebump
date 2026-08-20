@@ -1,0 +1,118 @@
+Script started on 2026-08-20 11:19:22+03:00 [COMMAND="python safebump.py   --eval-pip-conflict-demo   --report reports/eval-pip-conflict.md" TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="230" LINES="55"]
+{
+  "controller_branch": "codex/sb-09-11-build-agent",
+  "source_hash": "c6715ad751dc69d590a9e6f958f0937be3f0c45aa521d848e4a308a5bd7a5fd0",
+  "observations": [
+    {
+      "name": "pytest",
+      "current_version": "8.4.2",
+      "latest_version": "9.1.1",
+      "change_type": "major",
+      "has_vulnerability": true,
+      "vulnerabilities": [
+        {
+          "id": "PYSEC-2026-1845",
+          "fix_versions": [
+            "9.0.3"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "uvicorn",
+      "current_version": "0.52.3",
+      "latest_version": "0.52.4",
+      "change_type": "patch",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    },
+    {
+      "name": "fastapi",
+      "current_version": "0.141.1",
+      "latest_version": "0.141.1",
+      "change_type": "none",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    },
+    {
+      "name": "httpx",
+      "current_version": "0.28.1",
+      "latest_version": "0.28.1",
+      "change_type": "none",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    }
+  ]
+}
+{
+  "package": "uvicorn",
+  "previous_version": "0.52.3",
+  "candidate_version": "0.52.4",
+  "change_type": "patch",
+  "has_vulnerability": false,
+  "vulnerabilities": [],
+  "branch": "safebump/eval-pip-conflict",
+  "pytest_exit_code": 0,
+  "pytest_stdout": "......                                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n6 passed, 1 warning in 0.24s",
+  "pytest_stderr": "",
+  "pip_check_exit_code": 1,
+  "pip_check_stdout": "safebump-conflict-fixture 1.0.0 has requirement uvicorn<0.52.4, but you have uvicorn 0.52.4.",
+  "pip_check_stderr": "",
+  "decision": "rollback",
+  "reason": "pip check exited with 1: safebump-conflict-fixture 1.0.0 has requirement uvicorn<0.52.4, but you have uvicorn 0.52.4.",
+  "commit": null,
+  "rollback": {
+    "pytest_exit_code": 0,
+    "pip_check_exit_code": 0,
+    "verified": true,
+    "pytest_stdout": "......                                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n6 passed, 1 warning in 0.24s",
+    "pytest_stderr": "",
+    "pip_check_stdout": "No broken requirements found.",
+    "pip_check_stderr": ""
+  },
+  "source_hash_before": "c6715ad751dc69d590a9e6f958f0937be3f0c45aa521d848e4a308a5bd7a5fd0",
+  "source_hash_after": "c6715ad751dc69d590a9e6f958f0937be3f0c45aa521d848e4a308a5bd7a5fd0",
+  "source_unchanged": true
+}
+{
+  "controller_branch": "codex/sb-09-11-build-agent",
+  "results": [
+    {
+      "package": "uvicorn",
+      "previous_version": "0.52.3",
+      "candidate_version": "0.52.4",
+      "change_type": "patch",
+      "has_vulnerability": false,
+      "vulnerabilities": [],
+      "branch": "safebump/eval-pip-conflict",
+      "pytest_exit_code": 0,
+      "pytest_stdout": "......                                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n6 passed, 1 warning in 0.24s",
+      "pytest_stderr": "",
+      "pip_check_exit_code": 1,
+      "pip_check_stdout": "safebump-conflict-fixture 1.0.0 has requirement uvicorn<0.52.4, but you have uvicorn 0.52.4.",
+      "pip_check_stderr": "",
+      "decision": "rollback",
+      "reason": "pip check exited with 1: safebump-conflict-fixture 1.0.0 has requirement uvicorn<0.52.4, but you have uvicorn 0.52.4.",
+      "commit": null,
+      "rollback": {
+        "pytest_exit_code": 0,
+        "pip_check_exit_code": 0,
+        "verified": true,
+        "pytest_stdout": "......                                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n6 passed, 1 warning in 0.24s",
+        "pytest_stderr": "",
+        "pip_check_stdout": "No broken requirements found.",
+        "pip_check_stderr": ""
+      },
+      "source_hash_before": "c6715ad751dc69d590a9e6f958f0937be3f0c45aa521d848e4a308a5bd7a5fd0",
+      "source_hash_after": "c6715ad751dc69d590a9e6f958f0937be3f0c45aa521d848e4a308a5bd7a5fd0",
+      "source_unchanged": true
+    }
+  ],
+  "remote_action": null,
+  "source_hash_before": "c6715ad751dc69d590a9e6f958f0937be3f0c45aa521d848e4a308a5bd7a5fd0",
+  "source_hash_after": "c6715ad751dc69d590a9e6f958f0937be3f0c45aa521d848e4a308a5bd7a5fd0",
+  "source_unchanged": true
+}
+Report: /mnt/Data/Projects/safebump/reports/eval-pip-conflict.md
+
+Script done on 2026-08-20 11:19:40+03:00 [COMMAND_EXIT_CODE="0"]

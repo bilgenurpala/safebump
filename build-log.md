@@ -150,3 +150,58 @@ The agent source SHA-256 remained `8178dcebf59cf92759aa36d0067c4221fcd07f9fbcb47
 ### Decision boundary
 
 The verification policy is deterministic rather than model-generated. The agent is not valuable because it invents a safety judgment; it is valuable because observed tool results change its next action. Passing tests and a clean dependency check lead to a local keep, failed or incomplete verification leads to rollback, and a major-version boundary leads to human approval.
+
+## 2026-08-20 — SB-09: Markdown run reports
+
+### What I tried
+
+Added a Markdown report for every completed or stopped run. The report records start and finish times, duration, attempted packages, versions, branches, command exit codes, keep/rollback/approval decisions, concrete command output, the remote-action gate, and the coverage boundary.
+
+### What broke
+
+The first default-branch break test correctly stopped on `main`, but its report still listed all six tests under “Verified by the target test suite.” Pytest had never run because the branch guard stopped first. That made the report internally dishonest even though the guard itself worked.
+
+The first improved rollback report also selected pytest's final `1 warning, 1 error` summary as its reason. The full evidence contained the real `AttributeError` involving `httpx.BaseTransport`, but the decision summary was still too generic for SB-09.
+
+### What I changed
+
+Made coverage reporting conditional on an observed successful pytest exit code. A guard-stopped run now says the target suite was not completed. Changed failure extraction to prefer pytest's concrete `E` exception line, so the HTTPX rollback reason names the absent `BaseTransport` API.
+
+### Evidence
+
+The before/after main reports and before/after rollback reports remain in `reports/`; matching unedited terminal sessions remain in `raw-runs/`. The final HTTPX report records the exact collection exception, and the restored baseline records 6 passed plus a clean `pip check`.
+
+## 2026-08-20 — SB-10: Guardrails, approval gate, and honesty layer
+
+### Implemented guardrails
+
+- Refuse `main`, `master`, detached HEAD, and tracked dirty working trees before package mutation.
+- Limit a run to four package attempts, ten minutes per command, and forty-five minutes in total.
+- Record push and PR requests as awaiting explicit approval; never execute merge.
+- Keep remote actions outside the automatic agent loop.
+- Report only checks that actually ran and list behavior the six tests cannot verify.
+
+### Break attempts
+
+- Renamed a disposable clone branch to `main`; SafeBump exited `1` before observation or mutation and still wrote a failure report.
+- Requested push without approval; the report recorded `executed: false`, and `git ls-remote` confirmed no matching remote branch.
+- Exercised the second-attempt boundary and an expired run deadline through the deterministic guardrail tests; both raised and all seven unit tests passed on Linux.
+- The main break attempt exposed the false coverage claim described in SB-09. It was fixed and rerun rather than hidden.
+
+### Honesty boundary
+
+A successful target run names the six tests that passed but still excludes production traffic, deployment behavior, load/concurrency, security properties outside the audit, and untested platforms. A stopped run no longer inherits those success claims.
+
+## 2026-08-20 — SB-11: Five executed evaluations
+
+### Results
+
+- EVAL-01 passed: Uvicorn `0.52.4` was kept locally after 6 tests and clean dependency metadata.
+- EVAL-02 passed after the report-reason fix: HTTPX `1.0.dev3` failed collection because `httpx.BaseTransport` was missing; `0.28.1` was restored and both baseline gates passed.
+- EVAL-03 passed: vulnerable pytest `8.4.2` remained unchanged because the available candidate crossed a major boundary and required approval.
+- EVAL-04 passed: a controlled local fixture produced a real Uvicorn metadata conflict. All 6 tests passed, `pip check` returned `1`, the candidate was rolled back, and the clean baseline was reverified.
+- EVAL-05 passed: an unapproved push request performed no remote mutation.
+
+### Raw evidence and limitation
+
+The Linux terminal sessions are preserved without editing in `raw-runs/`; generated reports are preserved in `reports/`. The core dependency run completed without mid-run hand editing. The eval fixtures are controlled demonstrations for failure paths; they do not expand the supported production scope beyond one pinned Python target.

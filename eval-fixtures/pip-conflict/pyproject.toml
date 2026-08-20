@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "safebump-conflict-fixture"
+version = "1.0.0"
+description = "Controlled pip check conflict fixture for SafeBump evaluation"
+requires-python = ">=3.14"
+dependencies = ["uvicorn<0.52.4"]
+
+[tool.setuptools]
+py-modules = ["safebump_conflict_fixture"]

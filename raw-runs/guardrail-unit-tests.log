@@ -1,0 +1,14 @@
+Script started on 2026-08-20 10:56:52+03:00 [COMMAND="python -m unittest -v test_safebump.py" TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="230" LINES="55"]
+test_merge_is_never_executed (test_safebump.ApprovalGateTests.test_merge_is_never_executed) ... [32mok[0m
+test_unapproved_push_is_not_executed (test_safebump.ApprovalGateTests.test_unapproved_push_is_not_executed) ... [32mok[0m
+test_failed_run_does_not_claim_tests_ran (test_safebump.HonestyReportTests.test_failed_run_does_not_claim_tests_ran) ... [32mok[0m
+test_successful_pytest_lists_bounded_coverage (test_safebump.HonestyReportTests.test_successful_pytest_lists_bounded_coverage) ... [32mok[0m
+test_attempt_limit_stops_second_attempt (test_safebump.RunLimitsTests.test_attempt_limit_stops_second_attempt) ... [32mok[0m
+test_expired_run_limit_stops_work (test_safebump.RunLimitsTests.test_expired_run_limit_stops_work) ... [32mok[0m
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+[32mOK[0m
+
+Script done on 2026-08-20 10:56:52+03:00 [COMMAND_EXIT_CODE="0"]

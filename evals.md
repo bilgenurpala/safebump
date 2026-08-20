@@ -97,3 +97,17 @@ SafeBump keeps the result local, asks for approval, and performs no remote mutat
 
 The five cases separately measure a successful local keep, test-driven rollback, the major-version approval gate, the independent `pip check` gate, and remote-action approval. They do not evaluate multi-repository operation, scheduling, npm, direct transitive-dependency upgrades, or full semantic compatibility because those capabilities are outside the MVP.
 
+## Executed Results — 2026-08-20
+
+| Case | Expected | Observed evidence | Result |
+|---|---|---|:---:|
+| EVAL-01 | Keep a compatible patch | Uvicorn `0.52.3 -> 0.52.4` ran on `safebump/uvicorn-0.52.4`; pytest returned `0` with 6 passed and the existing warning, `pip check` returned `0`, and the local decision was `keep`. | Pass |
+| EVAL-02 | Roll back a test-breaking candidate with a specific reason | HTTPX `1.0.dev3` produced pytest exit `2` during collection because `httpx.BaseTransport` was absent. SafeBump restored `0.28.1`; restored pytest and `pip check` returned `0`; the temporary branch was deleted. | Pass after report fix |
+| EVAL-03 | Route a major security fix to approval | `PYSEC-2026-1845` was observed in pytest `8.4.2`. The latest candidate was major, so the result was `human_approval_required`; no install or package branch was created. | Pass |
+| EVAL-04 | Roll back on a dependency conflict even with green tests | The controlled fixture required `uvicorn<0.52.4`. All 6 tests passed on `0.52.4`, while real `pip check` returned `1` with the exact incompatibility. SafeBump restored `0.52.3`, verified both baseline gates, deleted the eval branch, and uninstalled the fixture. | Pass |
+| EVAL-05 | Block push without approval | The report recorded `awaiting_human_approval` and `executed: false`. `git ls-remote` returned no `safebump/uvicorn-0.52.4` remote ref; the kept branch remained local. | Pass |
+
+The complete run completed without mid-run hand editing. The raw terminal records are under [`raw-runs/`](raw-runs/), and the generated Markdown reports are under [`reports/`](reports/).
+
+Two initially generated reports were not accepted as final evidence. The first main-branch failure report claimed the target tests were verified even though the guard stopped before pytest. The first EVAL-02 reason used the generic summary `1 warning, 1 error` instead of the concrete `BaseTransport` exception. Both failures are retained in the evidence directories and described in `build-log.md`.
+

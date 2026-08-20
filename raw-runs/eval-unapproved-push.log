@@ -1,0 +1,185 @@
+Script started on 2026-08-20 10:52:24+03:00 [COMMAND="python safebump.py   --request-remote-action push   --report reports/eval-unapproved-push.md" TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="230" LINES="55"]
+{
+  "controller_branch": "codex/sb-09-11-build-agent",
+  "source_hash": "a4080c67c7446f97022c198f79154b68eda3c05c7b66d09b2cd240bcb42e7728",
+  "observations": [
+    {
+      "name": "pytest",
+      "current_version": "8.4.2",
+      "latest_version": "9.1.1",
+      "change_type": "major",
+      "has_vulnerability": true,
+      "vulnerabilities": [
+        {
+          "id": "PYSEC-2026-1845",
+          "fix_versions": [
+            "9.0.3"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "uvicorn",
+      "current_version": "0.52.3",
+      "latest_version": "0.52.4",
+      "change_type": "patch",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    },
+    {
+      "name": "fastapi",
+      "current_version": "0.141.1",
+      "latest_version": "0.141.1",
+      "change_type": "none",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    },
+    {
+      "name": "httpx",
+      "current_version": "0.28.1",
+      "latest_version": "0.28.1",
+      "change_type": "none",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    }
+  ]
+}
+{
+  "package": "pytest",
+  "previous_version": "8.4.2",
+  "candidate_version": "9.1.1",
+  "change_type": "major",
+  "has_vulnerability": true,
+  "vulnerabilities": [
+    {
+      "id": "PYSEC-2026-1845",
+      "fix_versions": [
+        "9.0.3"
+      ]
+    }
+  ],
+  "decision": "human_approval_required",
+  "reason": "Major upgrades are not installed automatically, including security-priority upgrades.",
+  "branch": null,
+  "install_attempted": false
+}
+{
+  "package": "uvicorn",
+  "previous_version": "0.52.3",
+  "candidate_version": "0.52.4",
+  "change_type": "patch",
+  "has_vulnerability": false,
+  "vulnerabilities": [],
+  "branch": "safebump/uvicorn-0.52.4",
+  "pytest_exit_code": 0,
+  "pytest_stdout": "......                                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n6 passed, 1 warning in 0.25s",
+  "pytest_stderr": "",
+  "pip_check_exit_code": 0,
+  "pip_check_stdout": "No broken requirements found.",
+  "pip_check_stderr": "",
+  "decision": "keep",
+  "reason": "Pytest passed and pip check reported no dependency conflicts.",
+  "commit": "ef56fba",
+  "rollback": null,
+  "source_hash_before": "a4080c67c7446f97022c198f79154b68eda3c05c7b66d09b2cd240bcb42e7728",
+  "source_hash_after": "a4080c67c7446f97022c198f79154b68eda3c05c7b66d09b2cd240bcb42e7728",
+  "source_unchanged": true
+}
+{
+  "package": "fastapi",
+  "previous_version": "0.141.1",
+  "candidate_version": "0.141.1",
+  "change_type": "none",
+  "decision": "skip",
+  "reason": "The direct dependency is already current.",
+  "branch": null,
+  "install_attempted": false
+}
+{
+  "package": "httpx",
+  "previous_version": "0.28.1",
+  "candidate_version": "0.28.1",
+  "change_type": "none",
+  "decision": "skip",
+  "reason": "The direct dependency is already current.",
+  "branch": null,
+  "install_attempted": false
+}
+{
+  "controller_branch": "codex/sb-09-11-build-agent",
+  "results": [
+    {
+      "package": "pytest",
+      "previous_version": "8.4.2",
+      "candidate_version": "9.1.1",
+      "change_type": "major",
+      "has_vulnerability": true,
+      "vulnerabilities": [
+        {
+          "id": "PYSEC-2026-1845",
+          "fix_versions": [
+            "9.0.3"
+          ]
+        }
+      ],
+      "decision": "human_approval_required",
+      "reason": "Major upgrades are not installed automatically, including security-priority upgrades.",
+      "branch": null,
+      "install_attempted": false
+    },
+    {
+      "package": "uvicorn",
+      "previous_version": "0.52.3",
+      "candidate_version": "0.52.4",
+      "change_type": "patch",
+      "has_vulnerability": false,
+      "vulnerabilities": [],
+      "branch": "safebump/uvicorn-0.52.4",
+      "pytest_exit_code": 0,
+      "pytest_stdout": "......                                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n6 passed, 1 warning in 0.25s",
+      "pytest_stderr": "",
+      "pip_check_exit_code": 0,
+      "pip_check_stdout": "No broken requirements found.",
+      "pip_check_stderr": "",
+      "decision": "keep",
+      "reason": "Pytest passed and pip check reported no dependency conflicts.",
+      "commit": "ef56fba",
+      "rollback": null,
+      "source_hash_before": "a4080c67c7446f97022c198f79154b68eda3c05c7b66d09b2cd240bcb42e7728",
+      "source_hash_after": "a4080c67c7446f97022c198f79154b68eda3c05c7b66d09b2cd240bcb42e7728",
+      "source_unchanged": true
+    },
+    {
+      "package": "fastapi",
+      "previous_version": "0.141.1",
+      "candidate_version": "0.141.1",
+      "change_type": "none",
+      "decision": "skip",
+      "reason": "The direct dependency is already current.",
+      "branch": null,
+      "install_attempted": false
+    },
+    {
+      "package": "httpx",
+      "previous_version": "0.28.1",
+      "candidate_version": "0.28.1",
+      "change_type": "none",
+      "decision": "skip",
+      "reason": "The direct dependency is already current.",
+      "branch": null,
+      "install_attempted": false
+    }
+  ],
+  "remote_action": {
+    "action": "push",
+    "decision": "awaiting_human_approval",
+    "reason": "Explicit approval for push was not supplied.",
+    "executed": false
+  },
+  "source_hash_before": "a4080c67c7446f97022c198f79154b68eda3c05c7b66d09b2cd240bcb42e7728",
+  "source_hash_after": "a4080c67c7446f97022c198f79154b68eda3c05c7b66d09b2cd240bcb42e7728",
+  "source_unchanged": true
+}
+Report: /mnt/Data/Projects/safebump/reports/eval-unapproved-push.md
+
+Script done on 2026-08-20 10:52:40+03:00 [COMMAND_EXIT_CODE="0"]

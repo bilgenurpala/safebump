@@ -1,0 +1,118 @@
+Script started on 2026-08-20 11:12:09+03:00 [COMMAND="python safebump.py   --approve-major-demo   --report reports/eval-test-rollback.md" TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="230" LINES="55"]
+{
+  "controller_branch": "codex/sb-09-11-build-agent",
+  "source_hash": "332b000f9a2c3326a2ea5b0a903d5c5c7d8e56f6a29c3886baf6f74ea73de108",
+  "observations": [
+    {
+      "name": "pytest",
+      "current_version": "8.4.2",
+      "latest_version": "9.1.1",
+      "change_type": "major",
+      "has_vulnerability": true,
+      "vulnerabilities": [
+        {
+          "id": "PYSEC-2026-1845",
+          "fix_versions": [
+            "9.0.3"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "uvicorn",
+      "current_version": "0.52.3",
+      "latest_version": "0.52.4",
+      "change_type": "patch",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    },
+    {
+      "name": "fastapi",
+      "current_version": "0.141.1",
+      "latest_version": "0.141.1",
+      "change_type": "none",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    },
+    {
+      "name": "httpx",
+      "current_version": "0.28.1",
+      "latest_version": "0.28.1",
+      "change_type": "none",
+      "has_vulnerability": false,
+      "vulnerabilities": []
+    }
+  ]
+}
+{
+  "package": "httpx",
+  "previous_version": "0.28.1",
+  "candidate_version": "1.0.dev3",
+  "change_type": "major",
+  "has_vulnerability": false,
+  "vulnerabilities": [],
+  "branch": "safebump/httpx-1.0.dev3",
+  "pytest_exit_code": 2,
+  "pytest_stdout": "==================================== ERRORS ====================================\n_____________________ ERROR collecting target/test_main.py _____________________\ntarget/test_main.py:4: in <module>\n    from fastapi.testclient import TestClient\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: in <module>\n    from starlette.testclient import TestClient as TestClient  # noqa\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.14/site-packages/starlette/testclient.py:207: in <module>\n    class _TestClientTransport(httpx.BaseTransport):\n                               ^^^^^^^^^^^^^^^^^^^\nE   AttributeError: module 'httpx' has no attribute 'BaseTransport'. Did you mean: 'Transport'?\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nERROR target/test_main.py - AttributeError: module 'httpx' has no attribute '...\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 warning, 1 error in 0.25s",
+  "pytest_stderr": "",
+  "pip_check_exit_code": 0,
+  "pip_check_stdout": "No broken requirements found.",
+  "pip_check_stderr": "",
+  "decision": "rollback",
+  "reason": "pytest exited with 2: 1 warning, 1 error in 0.25s",
+  "commit": null,
+  "rollback": {
+    "pytest_exit_code": 0,
+    "pip_check_exit_code": 0,
+    "verified": true,
+    "pytest_stdout": "......                                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n6 passed, 1 warning in 0.25s",
+    "pytest_stderr": "",
+    "pip_check_stdout": "No broken requirements found.",
+    "pip_check_stderr": ""
+  },
+  "source_hash_before": "332b000f9a2c3326a2ea5b0a903d5c5c7d8e56f6a29c3886baf6f74ea73de108",
+  "source_hash_after": "332b000f9a2c3326a2ea5b0a903d5c5c7d8e56f6a29c3886baf6f74ea73de108",
+  "source_unchanged": true
+}
+{
+  "controller_branch": "codex/sb-09-11-build-agent",
+  "results": [
+    {
+      "package": "httpx",
+      "previous_version": "0.28.1",
+      "candidate_version": "1.0.dev3",
+      "change_type": "major",
+      "has_vulnerability": false,
+      "vulnerabilities": [],
+      "branch": "safebump/httpx-1.0.dev3",
+      "pytest_exit_code": 2,
+      "pytest_stdout": "==================================== ERRORS ====================================\n_____________________ ERROR collecting target/test_main.py _____________________\ntarget/test_main.py:4: in <module>\n    from fastapi.testclient import TestClient\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: in <module>\n    from starlette.testclient import TestClient as TestClient  # noqa\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.14/site-packages/starlette/testclient.py:207: in <module>\n    class _TestClientTransport(httpx.BaseTransport):\n                               ^^^^^^^^^^^^^^^^^^^\nE   AttributeError: module 'httpx' has no attribute 'BaseTransport'. Did you mean: 'Transport'?\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nERROR target/test_main.py - AttributeError: module 'httpx' has no attribute '...\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 warning, 1 error in 0.25s",
+      "pytest_stderr": "",
+      "pip_check_exit_code": 0,
+      "pip_check_stdout": "No broken requirements found.",
+      "pip_check_stderr": "",
+      "decision": "rollback",
+      "reason": "pytest exited with 2: 1 warning, 1 error in 0.25s",
+      "commit": null,
+      "rollback": {
+        "pytest_exit_code": 0,
+        "pip_check_exit_code": 0,
+        "verified": true,
+        "pytest_stdout": "......                                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.14/site-packages/fastapi/testclient.py:1\n  /mnt/Data/Projects/safebump/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n6 passed, 1 warning in 0.25s",
+        "pytest_stderr": "",
+        "pip_check_stdout": "No broken requirements found.",
+        "pip_check_stderr": ""
+      },
+      "source_hash_before": "332b000f9a2c3326a2ea5b0a903d5c5c7d8e56f6a29c3886baf6f74ea73de108",
+      "source_hash_after": "332b000f9a2c3326a2ea5b0a903d5c5c7d8e56f6a29c3886baf6f74ea73de108",
+      "source_unchanged": true
+    }
+  ],
+  "remote_action": null,
+  "source_hash_before": "332b000f9a2c3326a2ea5b0a903d5c5c7d8e56f6a29c3886baf6f74ea73de108",
+  "source_hash_after": "332b000f9a2c3326a2ea5b0a903d5c5c7d8e56f6a29c3886baf6f74ea73de108",
+  "source_unchanged": true
+}
+Report: /mnt/Data/Projects/safebump/reports/eval-test-rollback.md
+
+Script done on 2026-08-20 11:12:26+03:00 [COMMAND_EXIT_CODE="0"]

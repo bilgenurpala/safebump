@@ -1,0 +1,15 @@
+Script started on 2026-08-20 10:54:40+03:00 [COMMAND="python3 safebump.py   --report reports/eval-main-guard.md" TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="230" LINES="55"]
+Report: /tmp/safebump-main-guard-2/reports/eval-main-guard.md
+Traceback (most recent call last):
+  File [35m"/tmp/safebump-main-guard-2/safebump.py"[0m, line [35m978[0m, in [35m<module>[0m
+    [31mmain[0m[1;31m()[0m
+    [31m~~~~[0m[1;31m^^[0m
+  File [35m"/tmp/safebump-main-guard-2/safebump.py"[0m, line [35m927[0m, in [35mmain[0m
+    controller_branch = require_safe_branch()
+  File [35m"/tmp/safebump-main-guard-2/safebump.py"[0m, line [35m260[0m, in [35mrequire_safe_branch[0m
+    raise RuntimeError(
+        f"Refusing to run on default branch: {branch}"
+    )
+[1;35mRuntimeError[0m: [35mRefusing to run on default branch: main[0m
+
+Script done on 2026-08-20 10:54:40+03:00 [COMMAND_EXIT_CODE="1"]

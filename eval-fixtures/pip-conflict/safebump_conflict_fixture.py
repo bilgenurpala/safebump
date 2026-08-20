@@ -1,0 +1,1 @@
+NAME = "safebump-conflict-fixture"

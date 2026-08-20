@@ -753,6 +753,10 @@ def render_report(
     remote_action: dict[str, object] | None,
 ) -> str:
     elapsed = (finished_at - started_at).total_seconds()
+    tests_verified = any(
+        result.get("pytest_exit_code") == 0
+        for result in results
+    )
     lines = [
         "# SafeBump Run Report",
         "",
@@ -837,9 +841,22 @@ def render_report(
             "",
             "The defined checks provide bounded evidence, not proof of complete safety.",
             "",
-            "Verified by the target test suite:",
-            "",
-            *[f"- `{test}`" for test in VERIFIED_TESTS],
+        ]
+    )
+
+    if tests_verified:
+        lines.extend(
+            [
+                "Verified by the target test suite:",
+                "",
+                *[f"- `{test}`" for test in VERIFIED_TESTS],
+            ]
+        )
+    else:
+        lines.append("The target test suite was not completed successfully in this run.")
+
+    lines.extend(
+        [
             "",
             "Not verified by this run:",
             "",

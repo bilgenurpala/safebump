@@ -552,6 +552,7 @@ def attempt_candidate(
     change_type: str,
     has_vulnerability: bool,
     vulnerabilities: list[dict[str, object]],
+    upgrade_branch_override: str | None = None,
 ) -> dict[str, object]:
     if RUN_LIMITS is None:
         raise RuntimeError("Run limits must be initialized")
@@ -560,7 +561,7 @@ def attempt_candidate(
     controller_branch = require_safe_branch()
     require_clean_worktree()
     initial_source_hash = source_hash()
-    upgrade_branch = build_upgrade_branch(
+    upgrade_branch = upgrade_branch_override or build_upgrade_branch(
         package_name,
         candidate_version,
     )
@@ -918,10 +919,67 @@ def run_failure_demo() -> dict[str, object]:
     )
 
 
+def install_conflict_fixture() -> None:
+    run_command(
+        [
+            str(TARGET_PYTHON),
+            "-m",
+            "pip",
+            "install",
+            "--no-deps",
+            str(REPO_ROOT / "eval-fixtures" / "pip-conflict"),
+        ],
+        {0},
+    )
+
+
+def uninstall_conflict_fixture() -> None:
+    run_command(
+        [
+            str(TARGET_PYTHON),
+            "-m",
+            "pip",
+            "uninstall",
+            "--yes",
+            "safebump-conflict-fixture",
+        ],
+        {0},
+    )
+
+
+def run_pip_conflict_demo() -> dict[str, object]:
+    install_conflict_fixture()
+
+    try:
+        baseline_check = run_pip_check()
+
+        if baseline_check.returncode != 0:
+            raise RuntimeError(
+                "The conflict fixture did not start from a clean baseline: "
+                f"{failure_detail(baseline_check)}"
+            )
+
+        return attempt_candidate(
+            package_name="uvicorn",
+            current_version="0.52.3",
+            candidate_version="0.52.4",
+            change_type="patch",
+            has_vulnerability=False,
+            vulnerabilities=[],
+            upgrade_branch_override="safebump/eval-pip-conflict",
+        )
+    finally:
+        uninstall_conflict_fixture()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--approve-major-demo",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--eval-pip-conflict-demo",
         action="store_true",
     )
     parser.add_argument(
@@ -979,8 +1037,13 @@ def main() -> None:
             )
         )
 
+        if args.approve_major_demo and args.eval_pip_conflict_demo:
+            raise RuntimeError("Select only one controlled eval demo")
+
         if args.approve_major_demo:
             results = [run_failure_demo()]
+        elif args.eval_pip_conflict_demo:
+            results = [run_pip_conflict_demo()]
         else:
             results = run_normal_candidates(observations)
 

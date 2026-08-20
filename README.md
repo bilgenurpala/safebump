@@ -14,24 +14,27 @@ SafeBump is for a Python project maintainer who wants bounded, reviewable eviden
 
 ## Architecture
 
-```text
-requirements + package index + audit findings
-                    |
-                    v
-           prioritize one candidate
-                    |
-       major -------+------- patch/minor
-         |                       |
-     approval             branch + install
-                                 |
-                         pytest + pip check
-                            |          |
-                           keep     rollback
-                            \          /
-                             Markdown report
-                                  |
-                         remote approval gate
+```mermaid
+flowchart TD
+    A["Pinned requirements"] --> B["Observe outdated packages and audit findings"]
+    B --> C["Prioritize one direct dependency"]
+    C --> D{"Version boundary"}
+    D -->|"Major"| E["Request human approval"]
+    D -->|"Patch or minor"| F["Create isolated local branch"]
+    F --> G["Install candidate"]
+    G --> H["Run pytest"]
+    G --> I["Run pip check"]
+    H --> J{"Both checks pass?"}
+    I --> J
+    J -->|"Yes"| K["Keep local commit"]
+    J -->|"No"| L["Restore pin and environment"]
+    K --> M["Write bounded-evidence report"]
+    L --> M
+    E --> M
+    M --> N["Wait at remote-action approval gate"]
 ```
+
+The two verification tools answer different questions. Pytest checks the behavior represented by the target's six tests; `pip check` checks installed package metadata. Neither is treated as complete proof on its own.
 
 ## Repository Structure
 
@@ -142,6 +145,15 @@ python safebump.py --request-remote-action push
 - Report only checks that actually completed and name the coverage boundary.
 
 If the run stops with `Refusing to run on default branch`, create and switch to a non-default controller branch. If it reports tracked changes, review and commit or intentionally restore those changes yourself; SafeBump will not decide what to discard.
+
+| Observed state | Agent decision | Automatic mutation |
+|---|---|:---:|
+| Major candidate | Human approval required | No |
+| Pytest `0` and `pip check` `0` | Keep on a local branch | Local only |
+| Pytest nonzero | Roll back with the concrete test error | Reversible rollback |
+| `pip check` nonzero | Roll back with the dependency conflict | Reversible rollback |
+| Push or PR without approval | Wait for approval | No |
+| Merge request | Block | No |
 
 ## Evaluation Results
 

@@ -218,4 +218,4 @@ The intended user was implied rather than stated. The setup also omitted the Git
 
 ### What changed
 
-Added the maintainer and approval responsibility explicitly, repeated that `target/` is a disclosed BE-02 copy, listed verified platform and tool prerequisites, added Git identity checks, explained network use and branch lifecycle, included a real kept-result excerpt and rollback link, added a dedicated guardrail section, and documented the two most likely safe-stop messages. The limitations remain unchanged rather than being softened for the final README.
+Added the maintainer and approval responsibility explicitly, repeated that `target/` is a disclosed BE-02 copy, listed verified platform and tool prerequisites, added Git identity checks, explained network use and branch lifecycle, included a real kept-result excerpt and rollback link, added a dedicated guardrail section, and documented the two most likely safe-stop messages. Replaced the text architecture sketch with a GitHub-rendered Mermaid decision flow and added a compact observed-state decision matrix. The limitations remain unchanged rather than being softened for the final README.
